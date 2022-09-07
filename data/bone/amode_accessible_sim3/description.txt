@@ -1,0 +1,1 @@
+this folder consists of different arrangement of amode (clump>>>sparse)

@@ -1,0 +1,5 @@
+this folder consists of different arrangement of amode from 15 to 30
+the selection of points is based-on-feeling,
+no connection between 15-20-25-30 points
+
+the _test file has normal information within it, the other is not.

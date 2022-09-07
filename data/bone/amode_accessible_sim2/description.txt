@@ -1,0 +1,3 @@
+this folder consists of different arrangement of amode from 5 to 30
+quite methodologycally selection of points
+the 5 is subset of 10 is subset of 15 ... is subset of 30
