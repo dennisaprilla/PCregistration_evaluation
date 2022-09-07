@@ -1,0 +1,2 @@
+# ignore ALL .config files
+*.ini
