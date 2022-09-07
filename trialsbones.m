@@ -4,7 +4,7 @@ clc; clear; close all;
 % download the function here
 % https://nl.mathworks.com/matlabcentral/fileexchange/17177-ini2struct
 addpath('functions\external\ini2struct');
-simconfig = ini2struct('simconfig.ini');
+simconfig = ini2struct('simconf.ini');
 
 %% Write the parameter from .INI file
 
