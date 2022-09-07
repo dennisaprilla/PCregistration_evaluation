@@ -1,28 +1,36 @@
 clc; clear; close all;
+%% Reading simulation config from .INI file
+
+% download the function here
+% https://nl.mathworks.com/matlabcentral/fileexchange/17177-ini2struct
+addpath('functions\external\ini2struct');
+simconfig = ini2struct('simconfig.ini');
+
+%% Write the parameter from .INI file
 
 % path to data
-path_bone   = 'data\bone';
-path_amode  = 'data\bone\amode_accessible_sim2';
-path_result = 'results';
+path_bone   = simconfig.pathdata.path_bone;
+path_amode  = simconfig.pathdata.path_amode;
+path_result = simconfig.pathdata.path_result;
 
 % path to project
-path_icpnormal = 'functions\experimental';
-path_ukf       = 'D:\DennisChristie\unscentedkalmanfilter_registration\functions\ukf';
-path_cpd       = 'D:\DennisChristie\CPD\core';
-path_goicp     = 'D:\DennisChristie\Go-ICP\build';
+path_icpnormal = simconfig.pathalgorithm.icpnormal;
+path_ukf       = simconfig.pathalgorithm.ukf;
+path_cpd       = simconfig.pathalgorithm.cpd;
+path_goicp     = simconfig.pathalgorithm.goicp;
 
 % add paths
 addpath(path_icpnormal);
 addpath(path_ukf);
 addpath(genpath(path_cpd));
-% addpath(path_goicp);
+addpath(path_goicp);
 
-displaybone = false;
+displaybone = logical(str2num(simconfig.simulation.displaybone));
 
 %% Prepare the bone point cloud
 
 % read the point cloud (bone) from STL/PLY file
-filename_bonedata = 'CT_Tibia_R';
+filename_bonedata = simconfig.simulation.filename_bonedata;
 filepath_bonedata = strcat(path_bone, filesep, filename_bonedata, '.stl');
 ptCloud           = stlread(filepath_bonedata);
 % scale the point cloud in in mm unit
@@ -53,7 +61,7 @@ end
 %% Prepare the A-mode measurement simulation
 
 % read the point cloud (A-mode) from the mat file
-filename_amodedata = 'amode_tibia_10';
+filename_amodedata = simconfig.simulation.filename_amodedata;
 filepath_amodedata = strcat(path_amode, filesep, filename_amodedata, '.mat');
 load(filepath_amodedata);
 
@@ -87,20 +95,20 @@ end
 
 %% Simulation Config
 
-noisetype         = 'uniform';
-noises            = [0.5 1.0 1.5 2.0];
+noisetype         = simconfig.simulation.noisetype;
+noises            = [0, 0.5, 1, 1.5, 2.0, 2.5];
 noisenormal_const = 2;
 init_poses        = [10];
-n_trials          = 100;
+n_trials          = str2num(simconfig.simulation.n_trials);
 
-description.algorithm  = 'ukfnormal';
+description.algorithm  = simconfig.simulation.algorithm;
 description.noises     = noises;
 description.init_poses = init_poses;
 description.trials     = n_trials;
 description.dim_desc   = ["trials", "observation dimensions", "noises", "initial poses"];
 
-trial_number      = 2;
-point_number      = 10;
+trial_number      = simconfig.simulation.trial_number;
+point_number      = simconfig.simulation.point_number;
 filename_result   = sprintf('%s_%d_trials%d.mat', description.algorithm, point_number, trial_number);
 
 GTs               = zeros(n_trials, 6, length(noises), length(init_poses));
