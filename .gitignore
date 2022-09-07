@@ -1,2 +1,1 @@
-# ignore ALL .config files
-*.ini
+simconf.ini
