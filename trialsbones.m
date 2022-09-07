@@ -96,7 +96,7 @@ end
 %% Simulation Config
 
 noisetype         = simconfig.simulation.noisetype;
-noises            = [0, 0.5, 1, 1.5, 2.0, 2.5];
+noises            = [0, 1.0, 2.0, 3.0];
 noisenormal_const = 2;
 init_poses        = [10];
 n_trials          = str2num(simconfig.simulation.n_trials);
@@ -107,8 +107,8 @@ description.init_poses = init_poses;
 description.trials     = n_trials;
 description.dim_desc   = ["trials", "observation dimensions", "noises", "initial poses"];
 
-trial_number      = simconfig.simulation.trial_number;
-point_number      = simconfig.simulation.point_number;
+trial_number      = str2num(simconfig.simulation.trial_number);
+point_number      = str2num(simconfig.simulation.point_number);
 filename_result   = sprintf('%s_%d_trials%d.mat', description.algorithm, point_number, trial_number);
 
 GTs               = zeros(n_trials, 6, length(noises), length(init_poses));
@@ -116,6 +116,7 @@ estimations       = zeros(n_trials, 6, length(noises), length(init_poses));
 errors            = zeros(n_trials, 6, length(noises), length(init_poses));
 rmse_measurements = zeros(n_trials, 1, length(noises), length(init_poses));
 rmse_trues        = zeros(n_trials, 1, length(noises), length(init_poses));
+exec_time         = zeros(n_trials, 1, length(noises), length(init_poses));
 
 
 %% Simulation Start
@@ -456,6 +457,7 @@ while (trial <= n_trials)
     errors(trial, :, noise, init_pose)            = diff( [GT; [t_all', eul_all] ], 1, 1);
     rmse_measurements(trial, :, noise, init_pose) = rmse_measurement;
     rmse_trues(trial, :, noise, init_pose)        = mean(sqrt(sum((Uest_breve - Y_breve).^2, 2)));
+    exec_time(trial, :, noise, init_pose)         = t_end;
 
     % if debug mode go out of the loop
     if( displaybone )
@@ -477,7 +479,7 @@ end
 % save the trials if not debug mode
 if (~displaybone)
     save( strcat(path_result, filesep, filename_result), ...
-          'GTs', 'estimations', 'errors', 'rmse_measurements', 'rmse_trues', 'description');
+          'GTs', 'estimations', 'errors', 'rmse_measurements', 'rmse_trues', 'exec_time', 'description');
 % if debug mode, go out of the loop
 else
     break;
