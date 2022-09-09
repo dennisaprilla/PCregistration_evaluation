@@ -290,13 +290,13 @@ while (trial <= n_trials)
         
         % Set the options
         opt.method='rigid'; % use rigid registration
-        opt.viz=0;          % show every iteration
-        opt.outliers=0.075;   % use 0.6 noise weight
+        opt.viz=0;          % 0 -> dont display figure every iteration
+        opt.outliers=0.1;   % use 0.6 noise weight
 
-        opt.normalize=0;    % normalize to unit variance and zero mean before registering (default)
-        opt.scale=0;        % estimate global scaling too (default)
-        opt.rot=1;          % estimate strictly rotational matrix (default)
-        opt.corresp=1;      % do not compute the correspondence vector at the end of registration (default).
+        opt.normalize=0;    % 0 -> not normalize to unit variance and zero mean before registering (somehow better?)
+        opt.scale=0;        % 0 -> dont estimate global scalling
+        opt.rot=1;          % 1 -> estimate strictly rotational matrix (default)
+        opt.corresp=0;      % 0 -> do not compute the correspondence vector at the end of registration (default).
                             % Can be quite slow for large data sets.
 
         opt.max_it=1000;    % max number of iterations
