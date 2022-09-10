@@ -300,7 +300,7 @@ while (trial <= n_trials)
                             % Can be quite slow for large data sets.
 
         opt.max_it=1000;    % max number of iterations
-        opt.tol=1e-15;      % tolerance
+        opt.tol=1e-20;      % tolerance
         opt.fgt=0;          % [0,1,2] if > 0, then use FGT.
                             % case 1: FGT with fixing sigma after it gets too small 
                             %         (faster, but the result can be rough)
