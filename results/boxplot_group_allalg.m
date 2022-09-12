@@ -6,7 +6,7 @@ clear; close all;
 addpath(genpath('..\functions\display'));
 
 % specify source
-sourcepath     = 'simresults\amode';
+sourcepath     = 'simresults';
 % specify output folder
 resultpath     = 'pictures';
 
@@ -120,36 +120,17 @@ data = {};
 for filename_idx=1:total_algorithms
     load(strcat(sourcefullpath, filesep, filenames{filename_idx},'.mat'));
     
-    if(filename_idx==2)
-        
     % renaming variables
     init_poses       = description.init_poses;
     total_poses      = length(init_poses);
     init_poses_sel   = 1;
     noises           = description.noises;
     total_noises     = length(noises);
-    noises_sel       = [1, 3, 5];
+    noises_sel       = [1, 2, 3, 4];
     total_noises_sel = length(noises_sel);
     
     for dof_idx=1:total_dof
         data{filename_idx, dof_idx} = reshape( abs( errors(:, dof_idx, noises_sel, init_poses_sel )), [], total_noises_sel);
-    end
-    
-    else
-    
-    % renaming variables
-    init_poses       = description.init_poses;
-    total_poses      = length(init_poses);
-    init_poses_sel   = 4;
-    noises           = description.noises;
-    total_noises     = length(noises);
-    noises_sel       = [1, 3, 5];
-    total_noises_sel = length(noises_sel);
-    
-    for dof_idx=1:total_dof
-        data{filename_idx, dof_idx} = reshape( abs( errors(:, dof_idx, noises_sel, init_poses_sel )), [], total_noises_sel);
-    end
-    
     end
     
 end
@@ -205,7 +186,7 @@ if (strcmp(display_config, 'compare_alg'))
         median_obj = findobj(gcf, 'Tag', 'MedianInner');
         set(median_obj, 'MarkerEdgeColor', 'r');
         outlier_obj = findobj(gcf, 'Tag', 'Outliers');
-        set(outlier_obj, 'MarkerEdgeColor', [0.3412, 0.3961, 0.4549]); 
+        set(outlier_obj, 'MarkerEdgeColor', [0.8, 0.8, 0.8]); 
         grid on;
 
         % limit the y_axis
