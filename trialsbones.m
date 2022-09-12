@@ -96,7 +96,7 @@ end
 %% Simulation Config
 
 noisetype         = simconfig.simulation.noisetype;
-noises            = [0, 1.0, 2.0, 3.0];
+noises            = [3.0];
 noisenormal_const = 2;
 init_poses        = [10];
 n_trials          = str2num(simconfig.simulation.n_trials);
