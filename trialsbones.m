@@ -18,12 +18,16 @@ path_icpnormal = simconfig.pathalgorithm.icpnormal;
 path_ukf       = simconfig.pathalgorithm.ukf;
 path_cpd       = simconfig.pathalgorithm.cpd;
 path_goicp     = simconfig.pathalgorithm.goicp;
+path_rsicp     = simconfig.pathalgorithm.rsicp;
+path_fricp     = simconfig.pathalgorithm.fricp;
 
 % add paths
 addpath(path_icpnormal);
 addpath(path_ukf);
 addpath(genpath(path_cpd));
 addpath(path_goicp);
+addpath(path_rsicp);
+addpath(path_fricp);
 
 displaybone = logical(str2num(simconfig.simulation.displaybone));
 
@@ -149,7 +153,10 @@ while (trial <= n_trials)
     
     % if the algorithm specified by user is using normal, we provide the
     % normal calculations
-    if (strcmp(description.algorithm, 'ukfnormal') || strcmp(description.algorithm, 'icpnormal'))
+    if (strcmp(description.algorithm, 'ukfnormal') || ...
+        strcmp(description.algorithm, 'icpnormal') || ...
+        strcmp(description.algorithm, 'rsicp') || ...
+        strcmp(description.algorithm, 'fricp'))
         U_hat_noised = [];
         for i=1:size(U_hat,1)
             if (strcmp(noisetype, 'uniform'))
@@ -174,7 +181,10 @@ while (trial <= n_trials)
                'Tag', 'plot_U_noised');    
         % if the algorithm specified by user is using normal, we provide the
         % normal calculations
-        if (strcmp(description.algorithm, 'ukfnormal') || strcmp(description.algorithm, 'icpnormal'))
+        if (strcmp(description.algorithm, 'ukfnormal') || ...
+            strcmp(description.algorithm, 'icpnormal') || ...
+            strcmp(description.algorithm, 'rsicp') || ...
+            strcmp(description.algorithm, 'fricp'))
             quiver3(axes1, ...
                     U_noised(:,1),     U_noised(:,2),     U_noised(:,3), ...
                     U_hat_noised(:,1), U_hat_noised(:,2), U_hat_noised(:,3), 0.1, ...
@@ -199,7 +209,10 @@ while (trial <= n_trials)
     
     % if the algorithm specified by user is using normal, we provide the
     % normal calculations
-    if (strcmp(description.algorithm, 'ukfnormal') || strcmp(description.algorithm, 'icpnormal'))
+    if (strcmp(description.algorithm, 'ukfnormal') || ...
+        strcmp(description.algorithm, 'icpnormal') || ...
+        strcmp(description.algorithm, 'rsicp') || ...
+        strcmp(description.algorithm, 'fricp'))
         Y_breve_hat  = (random_R * U_breve_hat')';
     end
     
@@ -419,6 +432,153 @@ while (trial <= n_trials)
         % reformat the T
         T_all = [R, t; 0 0 0 1];
         % no rmse reported, so give it NaN
+        rmse_measurement = NaN;
+
+    elseif (strcmp(description.algorithm, 'rsicp'))
+
+        % get the point cloud
+        moving       = U_noised';
+        movingnormal = U_hat_noised';
+        fixed        = Y_breve';
+        fixednormal  = Y_breve_hat';
+        
+        % normalize the point cloud
+        % get the scale
+        scaleS = norm(max(moving,[],2)-min(moving,[],2));
+        scaleT = norm(max(fixed,[],2)-min(fixed,[],2));
+        scale = max(scaleS,scaleT);
+        % scale the point cloud
+        SP = moving/scale;
+        TP = fixed/scale;
+        % get the offset
+        meanS = mean(SP,2);
+        meanT = mean(TP,2);
+        % offset the point cloud
+        SP = SP-repmat(meanS,1,size(SP,2));
+        TP = TP-repmat(meanT,1,size(TP,2));
+        
+        % registration with RSICP
+        [T_all, ~] = RSICP(SP,TP,movingnormal,fixednormal);
+
+        % scale back the translation
+        trans = T_all(1:3,4);
+        trans = trans + meanT - T_all(1:3,1:3) * meanS;
+        trans = trans*scale;
+        T_all(1:3,4) = trans;
+
+        % calculate rmse
+        % SP = double(moving);
+        % P1 = T0(1:3,1:3)*SP+repmat(T0(1:3,4),1,size(SP,2));
+        % P2 = Tini_gt(1:3,1:3)*SP+repmat(Tini_gt(1:3,4),1,size(SP,2));
+        % rmse_measurement = sqrt(sum(sum((P1-P2).^2))/size(SP,2));
+        rmse_measurement = NaN;
+
+    elseif (strcmp(description.algorithm, 'fricp'))
+
+        % get the point cloud
+        moving       = U_noised';
+        movingnormal = U_hat_noised';
+        fixed        = Y_breve';
+        fixednormal  = Y_breve_hat';
+
+        % normalize the point cloud
+        % get the scale
+        scaleS = norm(max(moving,[],2)-min(moving,[],2));
+        scaleT = norm(max(fixed,[],2)-min(fixed,[],2));
+        scale = max(scaleS,scaleT);
+        % scale the point cloud
+        SP = moving/scale;
+        TP = fixed/scale;
+        % get the offset
+        meanS = mean(SP,2);
+        meanT = mean(TP,2);
+        % offset the point cloud
+        SP = SP-repmat(meanS,1,size(SP,2));
+        TP = TP-repmat(meanT,1,size(TP,2));
+        
+        % convert to pointcloud object
+        %{
+        SP_pc = pointCloud(SP', 'Normal', movingnormal');
+        TP_pc = pointCloud(TP', 'Normal', fixednormal');
+        % write them to ply file
+        SP_pc_filepath = fullfile(path_fricp, "build", "data", "SP_pc.ply");
+        TP_pc_filepath = fullfile(path_fricp, "build", "data", "TP_pc.ply");
+        pcwrite(SP_pc, SP_pc_filepath);
+        pcwrite(TP_pc, TP_pc_filepath);
+        %}
+
+        % write to ply file, matlab built in function pcwrite, writes
+        % "double" as the properties of the point clouds position and
+        % normal, it does not supported by the FRICP, so i need to write it
+        % myself
+        SP_pc_filepath = fullfile(path_fricp, "build", "data", "SP_pc.ply");
+        TP_pc_filepath = fullfile(path_fricp, "build", "data", "TP_pc.ply");
+
+        % Open the file for source
+        fileID = fopen(SP_pc_filepath,'w');
+        % Write the header
+        fprintf(fileID, 'ply\n');
+        fprintf(fileID, 'format ascii 1.0\n');
+        fprintf(fileID, 'element vertex %d\n', size(SP, 2));
+        fprintf(fileID, 'property float x\n');
+        fprintf(fileID, 'property float y\n');
+        fprintf(fileID, 'property float z\n');
+        fprintf(fileID, 'property float nx\n');
+        fprintf(fileID, 'property float ny\n');
+        fprintf(fileID, 'property float nz\n');
+        fprintf(fileID, 'end_header\n');
+        % Write the points and normals
+        data = [SP; movingnormal]'; % Concatenate the points and normals
+        fprintf(fileID, '%f %f %f %f %f %f\n', data');
+        % Close the file
+        fclose(fileID);
+
+        % Open the file for target
+        fileID = fopen(TP_pc_filepath,'w');
+        % Write the header
+        fprintf(fileID, 'ply\n');
+        fprintf(fileID, 'format ascii 1.0\n');
+        fprintf(fileID, 'element vertex %d\n', size(TP, 2));
+        fprintf(fileID, 'property float x\n');
+        fprintf(fileID, 'property float y\n');
+        fprintf(fileID, 'property float z\n');
+        fprintf(fileID, 'property float nx\n');
+        fprintf(fileID, 'property float ny\n');
+        fprintf(fileID, 'property float nz\n');
+        fprintf(fileID, 'end_header\n');
+        % Write the points and normals
+        data = [TP; fixednormal]'; % Concatenate the points and normals
+        fprintf(fileID, '%f %f %f %f %f %f\n', data');
+        % Close the file
+        fclose(fileID);
+
+        % run FRICP
+        fricp_exe = "FRICP.exe";
+        cmd = sprintf("%s %s %s %s %d", ...
+                      fullfile(path_fricp, "build", "Debug", fricp_exe), ...
+                      TP_pc_filepath, ...
+                      SP_pc_filepath, ...
+                      fullfile(path_fricp, "build", "data", "res\"), ...
+                      3);
+        system(cmd);
+
+        % open output file
+        output_filepath = fullfile(path_fricp, "build", "data", "res", "m3trans.txt");
+        file  = fopen(output_filepath, 'r');
+        T_all = fscanf(file, '%f', [4,4])';
+
+        % scale back the translation
+        trans = T_all(1:3,4);
+        trans = trans + meanT - T_all(1:3,1:3) * meanS;
+        trans = trans*scale;
+        T_all(1:3,4) = trans;
+
+        % delete everything
+        delete(SP_pc_filepath);
+        delete(TP_pc_filepath);
+        delete(output_filepath);
+        delete(fullfile(path_fricp, "build", "data", "res", "m3reg_pc.ply"));
+                      
         rmse_measurement = NaN;
     end
     t_end = toc(t_start);
