@@ -4,6 +4,7 @@ clc; clear; close all;
 % download the function here
 % https://nl.mathworks.com/matlabcentral/fileexchange/17177-ini2struct
 addpath('functions\external\ini2struct');
+addpath('functions\external\others');
 simconfig = ini2struct('simconf.ini');
 
 %% Write the parameter from .INI file
@@ -41,7 +42,7 @@ ptCloud           = stlread(filepath_bonedata);
 ptCloud_scale     = 1000;
 ptCloud_Npoints   = size(ptCloud.Points,1);
 ptCloud_centroid  = mean(ptCloud.Points, 1);
-% prepare Ŭ, the noiseless, complete, moving dataset
+% prepare , the noiseless, complete, moving dataset
 U_breve           = (ptCloud.Points - ptCloud_centroid) * ptCloud_scale;
 U_breve_hat       = STLVertexNormals(ptCloud.ConnectivityList, ptCloud.Points);
 
@@ -100,7 +101,7 @@ end
 %% Simulation Config
 
 noisetype         = simconfig.simulation.noisetype;
-noises            = [3.0];
+noises            = [0.0 1.0 2.0 3.0];
 noisenormal_const = 2;
 init_poses        = [10];
 n_trials          = str2num(simconfig.simulation.n_trials);
@@ -199,8 +200,8 @@ while (trial <= n_trials)
     
     %% radom transformation, point selection, and noise
     
-    % contruct a arbritary transformation then apply it to Ŭ in order to
-    % generate Y̆, the noiseless, complete, fixed dataset.
+    % contruct a arbritary transformation then apply it to  in order to
+    % generate Y, the noiseless, complete, fixed dataset.
     random_trans = -max_t     + (max_t -(-max_t))         .* rand(1, 3);
     random_theta = -max_theta + (max_theta -(-max_theta)) .* rand(1, 3);
     random_R     = eul2rotm(deg2rad(random_theta), 'ZYX');
@@ -511,8 +512,8 @@ while (trial <= n_trials)
         % "double" as the properties of the point clouds position and
         % normal, it does not supported by the FRICP, so i need to write it
         % myself
-        SP_pc_filepath = fullfile(path_fricp, "build", "data", "SP_pc.ply");
-        TP_pc_filepath = fullfile(path_fricp, "build", "data", "TP_pc.ply");
+        SP_pc_filepath = fullfile(path_fricp, "data", "SP_pc.ply");
+        TP_pc_filepath = fullfile(path_fricp, "data", "TP_pc.ply");
 
         % Open the file for source
         fileID = fopen(SP_pc_filepath,'w');
@@ -555,15 +556,15 @@ while (trial <= n_trials)
         % run FRICP
         fricp_exe = "FRICP.exe";
         cmd = sprintf("%s %s %s %s %d", ...
-                      fullfile(path_fricp, "build", "Debug", fricp_exe), ...
+                      fullfile(path_fricp, "Debug", fricp_exe), ...
                       TP_pc_filepath, ...
                       SP_pc_filepath, ...
-                      fullfile(path_fricp, "build", "data", "res\"), ...
+                      fullfile(path_fricp, "data", "res\"), ...
                       3);
         system(cmd);
 
         % open output file
-        output_filepath = fullfile(path_fricp, "build", "data", "res", "m3trans.txt");
+        output_filepath = fullfile(path_fricp, "data", "res", "m3trans.txt");
         file  = fopen(output_filepath, 'r');
         T_all = fscanf(file, '%f', [4,4])';
 
@@ -577,7 +578,7 @@ while (trial <= n_trials)
         delete(SP_pc_filepath);
         delete(TP_pc_filepath);
         delete(output_filepath);
-        delete(fullfile(path_fricp, "build", "data", "res", "m3reg_pc.ply"));
+        delete(fullfile(path_fricp, "data", "res", "m3reg_pc.ply"));
                       
         rmse_measurement = NaN;
     end
