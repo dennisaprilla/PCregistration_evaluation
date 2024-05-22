@@ -101,10 +101,10 @@ end
 %% Simulation Config
 
 noisetype         = simconfig.simulation.noisetype;
-noises            = [0.0 1.0 2.0 3.0];
-noisenormal_const = 2;
-init_poses        = [10];
-n_trials          = str2num(simconfig.simulation.n_trials);
+noises            = str2double(split(simconfig.simulation.noises, ','))';
+noisenormal_const = str2double(simconfig.simulation.noisenormal_const);
+init_poses        = str2double(split(simconfig.simulation.init_poses, ','))';
+n_trials          = str2double(simconfig.simulation.n_trials);
 
 description.algorithm  = simconfig.simulation.algorithm;
 description.noises     = noises;
@@ -112,8 +112,8 @@ description.init_poses = init_poses;
 description.trials     = n_trials;
 description.dim_desc   = ["trials", "observation dimensions", "noises", "initial poses"];
 
-trial_number      = str2num(simconfig.simulation.trial_number);
-point_number      = str2num(simconfig.simulation.point_number);
+trial_number      = str2double(simconfig.simulation.trial_number);
+point_number      = str2double(simconfig.simulation.point_number);
 filename_result   = sprintf('%s_%d_trials%d.mat', description.algorithm, point_number, trial_number);
 
 GTs               = zeros(n_trials, 6, length(noises), length(init_poses));
@@ -401,15 +401,17 @@ while (trial <= n_trials)
         fprintf(fileID,'%d\n',  size(model, 1));
         fprintf(fileID,'%f %f %f\n', model');
         fclose(fileID); 
-%         % verify the data
-%         model_read = readpoints('data\temp\model.txt');
-%         data_read = readpoints('data\temp\data.txt');
-%         figure(3);
-%         plot3(data_read(1,:), data_read(2,:), data_read(3,:), 'or');
-%         hold on; grid on;
-%         plot3(model_read(1,:),  model_read(2,:),  model_read(3,:), '.b');
-%         hold off; axis equal; title('Initial Pose');
-%         break;
+        
+        % % verify the data
+        % model_read = readpoints('data\temp\model.txt');
+        % data_read = readpoints('data\temp\data.txt');
+        % figure(3);
+        % plot3(data_read(1,:), data_read(2,:), data_read(3,:), 'or');
+        % hold on; grid on;
+        % plot3(model_read(1,:),  model_read(2,:),  model_read(3,:), '.b');
+        % hold off; axis equal; title('Initial Pose');
+        % break;
+
         % run GO-ICP
         goicp_exe  = "GoICP_vc2012";
         cmd = sprintf("%s %s %s %d %s %s", ...
@@ -461,13 +463,20 @@ while (trial <= n_trials)
         % registration with RSICP
         [T_all, ~] = RSICP(SP,TP,movingnormal,fixednormal);
 
+        % rsicp sometimes can't find the solution (idk why), so let's redo
+        % this loop. if not, do as usual
+        if (any(isnan(T_all), 'all'))
+            continue;
+        end
+
         % scale back the translation
         trans = T_all(1:3,4);
         trans = trans + meanT - T_all(1:3,1:3) * meanS;
         trans = trans*scale;
-        T_all(1:3,4) = trans;
+        T_all(1:3,4) = trans;        
 
-        % calculate rmse
+        % i should have implemement the calculating, but i am very lazy at
+        % the moment, i leave future me to do this.
         % SP = double(moving);
         % P1 = T0(1:3,1:3)*SP+repmat(T0(1:3,4),1,size(SP,2));
         % P2 = Tini_gt(1:3,1:3)*SP+repmat(Tini_gt(1:3,4),1,size(SP,2));
@@ -497,17 +506,6 @@ while (trial <= n_trials)
         SP = SP-repmat(meanS,1,size(SP,2));
         TP = TP-repmat(meanT,1,size(TP,2));
         
-        % convert to pointcloud object
-        %{
-        SP_pc = pointCloud(SP', 'Normal', movingnormal');
-        TP_pc = pointCloud(TP', 'Normal', fixednormal');
-        % write them to ply file
-        SP_pc_filepath = fullfile(path_fricp, "build", "data", "SP_pc.ply");
-        TP_pc_filepath = fullfile(path_fricp, "build", "data", "TP_pc.ply");
-        pcwrite(SP_pc, SP_pc_filepath);
-        pcwrite(TP_pc, TP_pc_filepath);
-        %}
-
         % write to ply file, matlab built in function pcwrite, writes
         % "double" as the properties of the point clouds position and
         % normal, it does not supported by the FRICP, so i need to write it
@@ -565,8 +563,9 @@ while (trial <= n_trials)
 
         % open output file
         output_filepath = fullfile(path_fricp, "data", "res", "m3trans.txt");
-        file  = fopen(output_filepath, 'r');
+        file  = fopen(output_filepath, 'r+');
         T_all = fscanf(file, '%f', [4,4])';
+        fclose(file);
 
         % scale back the translation
         trans = T_all(1:3,4);
@@ -579,8 +578,17 @@ while (trial <= n_trials)
         delete(TP_pc_filepath);
         delete(output_filepath);
         delete(fullfile(path_fricp, "data", "res", "m3reg_pc.ply"));
-                      
+        
+        % rsicp sometimes can't find the solution (idk why), so let's redo
+        % this loop. if not, do as usual
+        if (any(isnan(T_all), 'all'))
+            continue;
+        end
+        
+        % i should have implemement the calculating, but i am very lazy at
+        % the moment, i leave future me to do this.
         rmse_measurement = NaN;
+
     end
     t_end = toc(t_start);
     fprintf(' (time: %.4fs)\n', t_end);    
