@@ -46,6 +46,12 @@ ptCloud_centroid  = mean(ptCloud.Points, 1);
 U_breve           = (ptCloud.Points - ptCloud_centroid) * ptCloud_scale;
 U_breve_hat       = STLVertexNormals(ptCloud.ConnectivityList, ptCloud.Points);
 
+% additional step to adjust the original position
+R_adjust     = eul2rotm(deg2rad([30 0 0]), 'ZYX');
+t_adjust     = zeros(1,3);
+U_breve      = (R_adjust * U_breve' + t_adjust')';
+U_breve_hat  = (R_adjust * U_breve_hat')';
+
 % show figure for sanity check
 if(displaybone)
     figure1 = figure('Name', 'Registration in Measurement Coordinate System', 'Position', [0 0 350 780]);
@@ -72,9 +78,14 @@ load(filepath_amodedata);
 
 % get the amode
 U     = vertcat(amode_all.Position) * ptCloud_scale;
+% additional step to adjust the original position
+U     = (R_adjust * U' + t_adjust')';
+
 % if the dataset has normal, we can directly load it
 if (exist('amode_all_normals', 'var'))
     U_hat = U_breve_hat(vertcat(amode_all.DataIndex), :);
+    % additional step to adjust the original position
+    % U_hat = (R_adjust * U_hat')';
 % if not, lets do some estimation
 else
     nearest_idx   = knnsearch(U_breve, U);
@@ -267,7 +278,7 @@ while (trial <= n_trials)
                                              'normalratio', 0.05, ...
                                              'ransacdistance', 5, ...
                                              'verbose', false, ...
-                                             'display', false);
+                                             'display', true);
 
         % sometimes ransac method in normal icp cant find the inlier, and
         % it will produce error, so redo this loop is that happen
@@ -379,6 +390,7 @@ while (trial <= n_trials)
                                            'bestrmse', true, ...
                                            'verbose', false, ...
                                            'display', false);
+
         % store the rmse
         rmse_measurement = mean_dist;
 

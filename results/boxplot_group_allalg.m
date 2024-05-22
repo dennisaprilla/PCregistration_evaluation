@@ -4,22 +4,25 @@
 
 clear; close all;
 addpath(genpath('..\functions\display'));
+addpath('..\functions\external\ini2struct');
+plotconfig = ini2struct('plotconf.ini');
 
 % specify source
-sourcepath     = 'simresults';
+sourcepath     = plotconfig.path.sourcepath;
 % specify output folder
-resultpath     = 'pictures';
+resultpath     = plotconfig.path.resultpath;
+% specify the file
+bone           = plotconfig.file.bone;
+trialname      = plotconfig.file.trialname;
 
 % if you want to compare all algorithm, use 'compare_alg'
 % if you want to compare point numbers, use 'compare_point'
 % if you want to compare point configuration, use 'compare_config'
-display_config = 'compare_alg';
-bone           = 'femur';
-trialname      = 'trials1';
+display_config = plotconfig.display.display_mode;
 % save picture?
-save_picture   = false;
+save_picture   = strcmp(plotconfig.display.save_picture, 'true');
 % limit error to visualized
-ymax           = 10;
+ymax           = str2double(plotconfig.display.yaxis_max);
 yticks         = (1:2:ymax);
 
 % compare algorithm will show all 6 DoF
@@ -31,9 +34,11 @@ if(strcmp(display_config, 'compare_alg'))
                    sprintf('%s_%d_%s', 'cpdmyronenko', 15, trialname), ...
                    sprintf('%s_%d_%s', 'ukf', 15, trialname), ...
                    sprintf('%s_%d_%s', 'goicp', 15, trialname), ...
+                   sprintf('%s_%d_%s', 'fricp', 15, trialname), ...
+                   sprintf('%s_%d_%s', 'rsicp', 15, trialname), ...
                    sprintf('%s_%d_%s', 'icpnormal', 15, trialname), ...
                    sprintf('%s_%d_%s', 'ukfnormal', 15, trialname) };
-    alg_names  = {'ICP', 'CPD', 'UKF', 'GOICP', 'ICP+norm', 'UKF+norm'};
+    alg_names  = {'ICP', 'CPD', 'UKF', 'GOICP', 'RSICP', 'FRICP', 'ICP+norm', 'UKF+norm'};
     
     % specify output folder details
     outputcategory = 'algorithm_comparison';
@@ -48,7 +53,7 @@ elseif(strcmp(display_config, 'compare_point'))
 	% specify source details
     sourcefullpath = strcat(sourcepath, filesep, bone, filesep, trialname);
     % specify source files
-    alg_used   = 'ukfnormal';
+    alg_used   = plotconfig.displaydetail.algorithm;
     filenames  = { sprintf('%s_%d_%s', alg_used, 10, trialname), ...
                    sprintf('%s_%d_%s', alg_used, 15, trialname), ...
                    sprintf('%s_%d_%s', alg_used, 20, trialname), ...
@@ -72,7 +77,7 @@ elseif(strcmp(display_config, 'compare_config'))
 	% specify source details
     sourcefullpath = strcat(sourcepath, filesep, bone, filesep, trialname);
     % specify source files
-    alg_used   = 'ukfnormal';
+    alg_used   = plotconfig.displaydetail.algorithm;
     filenames  = { sprintf('%s_%d_conf%d_%s', alg_used, 15, 1, trialname), ...
                    sprintf('%s_%d_conf%d_%s', alg_used, 15, 2, trialname), ...
                    sprintf('%s_%d_conf%d_%s', alg_used, 15, 3, trialname)};
@@ -106,7 +111,7 @@ else
 end
 
 % for visualization purpose
-colorpalette = {'#57606f', '#5352ed', '#70a1ff', '#2ed573', '#ffa502', '#ff4757'};
+colorpalette = {'#57606f', '#5352ed', '#70a1ff', '#18dcff', '#2ed573', '#ffa502', '#e67e22', '#ff4757'};
 
 %% Preparing Data
 
@@ -123,10 +128,10 @@ for filename_idx=1:total_algorithms
     % renaming variables
     init_poses       = description.init_poses;
     total_poses      = length(init_poses);
-    init_poses_sel   = 1;
+    init_poses_sel   = str2double(split(plotconfig.displaydetail.initposes_idxsel, ','))';
     noises           = description.noises;
     total_noises     = length(noises);
-    noises_sel       = [1, 2, 3, 4];
+    noises_sel       = str2double(split(plotconfig.displaydetail.noises_idxsel, ','))';
     total_noises_sel = length(noises_sel);
     
     for dof_idx=1:total_dof
