@@ -292,17 +292,26 @@ while (trial <= n_trials)
     elseif (strcmp(description.algorithm, 'cpdmatlab'))
     
         % CPD Registration
+        %{
         % change the point structure to be suit to matlab icp built in function
         moving = pointCloud(U_noised);
-        fixed  = pcdownsample( pointCloud(Y_breve), 'gridAverage', 3);
+        fixed  = pcdownsample( pointCloud(Y_breve), 'gridAverage', 5);
         % register with icp
         [tform, movingReg, cpd_rmse] = pcregistercpd( moving, ...
                                                       fixed, ...
                                                       'Transform', 'Rigid', ...
-                                                      'OutlierRatio', 0.1, ...
+                                                      'OutlierRatio', 0.005, ...
                                                       'MaxIteration', 1000, ...
-                                                      'Tolerance', 1e-10, ...
+                                                      'Tolerance', 1e-20, ...
                                                       'verbose', false);
+        %}
+        moving = pointCloud(U_noised);
+        fixed  = pointCloud(Y_breve);
+        [tform, movingReg, cpd_rmse] = pcregistericp( moving, ...
+                                                      fixed, ...
+                                                      'InlierRatio', 1, ...
+                                                      'Verbose', false, ...
+                                                      'MaxIteration', 50 );
     	% change the T form
     	T_all   = tform.T';
         % store the rmse
@@ -311,12 +320,12 @@ while (trial <= n_trials)
     elseif (strcmp(description.algorithm, 'cpdmyronenko'))
         
         moving = U_noised;
-        fixed  = pcdownsample( pointCloud(Y_breve), 'gridAverage', 3).Location;
+        fixed  = pcdownsample( pointCloud(Y_breve), 'gridAverage', 5).Location;
         
         % Set the options
         opt.method='rigid'; % use rigid registration
         opt.viz=0;          % 0 -> dont display figure every iteration
-        opt.outliers=0.1;   % use 0.6 noise weight
+        opt.outliers=0.01;  % use 0.6 noise weight
 
         opt.normalize=0;    % 0 -> not normalize to unit variance and zero mean before registering (somehow better?)
         opt.scale=0;        % 0 -> dont estimate global scalling
@@ -511,12 +520,12 @@ while (trial <= n_trials)
         % scale the point cloud
         SP = moving/scale;
         TP = fixed/scale;
-        % get the offset
-        meanS = mean(SP,2);
-        meanT = mean(TP,2);
-        % offset the point cloud
-        SP = SP-repmat(meanS,1,size(SP,2));
-        TP = TP-repmat(meanT,1,size(TP,2));
+%         % get the offset
+%         meanS = mean(SP,2);
+%         meanT = mean(TP,2);
+%         % offset the point cloud
+%         SP = SP-repmat(meanS,1,size(SP,2));
+%         TP = TP-repmat(meanT,1,size(TP,2));
         
         % write to ply file, matlab built in function pcwrite, writes
         % "double" as the properties of the point clouds position and
@@ -580,10 +589,10 @@ while (trial <= n_trials)
         fclose(file);
 
         % scale back the translation
-        trans = T_all(1:3,4);
-        trans = trans + meanT - T_all(1:3,1:3) * meanS;
-        trans = trans*scale;
-        T_all(1:3,4) = trans;
+%         trans = T_all(1:3,4);
+%         trans = trans + meanT - T_all(1:3,1:3) * meanS;
+%         trans = trans*scale;
+        T_all(1:3,4) = T_all(1:3,4) * scale;
 
         % delete everything
         delete(SP_pc_filepath);
